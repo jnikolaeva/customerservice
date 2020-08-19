@@ -1,0 +1,218 @@
+openapi: 3.0.0
+info:
+  title: Customer Service
+  description: |
+    This is simple client API
+  contact:
+    email: julia.matveeva@gmail.com
+  version: 1.0.0
+servers:
+  - url: http://hostname/api/v1/customers
+    description: Demo customer API
+tags:
+  - name: customer
+    description: Operations about customers
+paths:
+  /:
+    post:
+      tags:
+        - customer
+      description: Registers a customer.
+      operationId: registerCustomer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerWithCredentials'
+            examples:
+              sample-user:
+                summary: Example
+                value:
+                  username: johndoe
+                  password: qwerty
+                  firstName: John
+                  lastName: Doe
+                  email: bestjohn@doe.com
+                  phone: +71002003040
+        required: true
+      responses:
+        "200":
+          description: Registered customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        "409":
+          description: duplicate email
+  /me:
+    get:
+      tags:
+        - customer
+      security:
+        - cookieAuth: []
+      description: Returns currently logged in customer
+      operationId: Customer
+      responses:
+        "200":
+          description: customer response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Unauthorized
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{id}:
+    get:
+      tags:
+        - customer
+      security:
+        - cookieAuth: []
+      description: Returns a customer based on ID. If the logged in user does not have access to the requested customer, 403 http status code will be returned
+      operationId: findCustomerById
+      parameters:
+        - name: id
+          in: path
+          description: ID of customer
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: customer response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Unauthorized
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - customer
+      security:
+        - cookieAuth: []
+      description: Update customer by ID supplied
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          description: ID of customer
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+            examples:
+              sample-user:
+                summary: Example
+                value:
+                  firstName: Julie
+                  lastName: Doe
+                  email: bestjohn@doe.com
+                  phone: +71004242424
+      responses:
+        "200":
+          description: customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid  # cookie name
+  schemas:
+    Customer:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          maxLength: 36
+        firstName:
+          type: string
+          maxLength: 256
+        lastName:
+          type: string
+          maxLength: 256
+        email:
+          type: string
+          format: email
+          maxLength: 256
+        phone:
+          type: string
+          format: phone
+          maxLength: 256
+    CustomerWithCredentials:
+      type: object
+      required:
+        - username
+        - password
+        - email
+      properties:
+        username:
+          type: string
+          maxLength: 256
+        password:
+          type: string
+          maxLength: 256
+        firstName:
+          type: string
+          maxLength: 256
+        lastName:
+          type: string
+          maxLength: 256
+        email:
+          type: string
+          format: email
+          maxLength: 256
+        phone:
+          type: string
+          format: phone
+          maxLength: 256
+    Error:
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
