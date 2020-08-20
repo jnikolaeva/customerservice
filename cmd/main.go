@@ -10,13 +10,17 @@ import (
 
 	gokitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	gokitprometheus "github.com/go-kit/kit/metrics/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
+	"github.com/jnikolaeva/eshop-common/httpkit"
 	postgresadapter "github.com/jnikolaeva/eshop-common/postgres"
 
-	"github.com/jnikolaeva/customerservice/internal/probes"
 	"github.com/jnikolaeva/customerservice/internal/customer/application"
 	usertransport "github.com/jnikolaeva/customerservice/internal/customer/infrastructure/transport"
+	"github.com/jnikolaeva/customerservice/internal/probes"
 
 	"github.com/jnikolaeva/customerservice/internal/customer/infrastructure/postgres"
 )
@@ -65,11 +69,24 @@ func main() {
 	service := application.NewAuthService(application.NewService(repository))
 	endpoints := usertransport.MakeEndpoints(service, identityProviderUrl)
 
+	metrics := httpkit.NewMetricsHolder(gokitprometheus.NewCounterFrom(prometheus.CounterOpts{
+		Namespace: "customer",
+		Name:      "request_count",
+		Help:      "Number of requests received.",
+	}, []string{"method", "endpoint", "status_code"}),
+		gokitprometheus.NewHistogramFrom(prometheus.HistogramOpts{
+			Namespace: "customer",
+			Name:      "request_latency_seconds",
+			Help:      "Total duration of request in seconds.",
+			Buckets:   prometheus.DefBuckets,
+		}, []string{"method", "endpoint"}))
+
 	mux := http.NewServeMux()
 
-	mux.Handle("/api/v1/", usertransport.MakeHandler("/api/v1/customers", endpoints, errorLogger))
+	mux.Handle("/api/v1/", usertransport.MakeHandler("/api/v1/customers", endpoints, errorLogger, metrics))
 	mux.Handle("/ready", probes.MakeReadyHandler())
 	mux.Handle("/live", probes.MakeLiveHandler())
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := startServer(serverAddr, mux, logger)
 

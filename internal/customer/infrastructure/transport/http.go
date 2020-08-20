@@ -10,6 +10,7 @@ import (
 	gokittransport "github.com/go-kit/kit/transport"
 	gokithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/jnikolaeva/eshop-common/httpkit"
 	"github.com/jnikolaeva/eshop-common/uuid"
 	"github.com/pkg/errors"
 
@@ -24,7 +25,7 @@ var (
 	ErrBadRequest       = errors.New("bad request")
 )
 
-func MakeHandler(pathPrefix string, endpoints Endpoints, errorLogger log.Logger) http.Handler {
+func MakeHandler(pathPrefix string, endpoints Endpoints, errorLogger log.Logger, metrics *httpkit.MetricsHolder) http.Handler {
 	options := []gokithttp.ServerOption{
 		gokithttp.ServerErrorEncoder(encodeErrorResponse),
 		gokithttp.ServerErrorHandler(gokittransport.NewLogErrorHandler(errorLogger)),
@@ -37,10 +38,10 @@ func MakeHandler(pathPrefix string, endpoints Endpoints, errorLogger log.Logger)
 
 	r := mux.NewRouter()
 	s := r.PathPrefix(pathPrefix).Subrouter()
-	s.Handle("", registerCustomerHandler).Methods(http.MethodPost)
-	s.Handle("/me", authMiddleware(getCurrentCustomerHandler)).Methods(http.MethodGet)
-	s.Handle("/{userId}", authMiddleware(findCustomerHandler)).Methods(http.MethodGet)
-	s.Handle("/{userId}", authMiddleware(updateCustomerHandler)).Methods(http.MethodPut)
+	s.Handle("", httpkit.InstrumentingMiddleware(registerCustomerHandler, metrics, "RegisterCustomer")).Methods(http.MethodPost)
+	s.Handle("/me", httpkit.InstrumentingMiddleware(authMiddleware(getCurrentCustomerHandler), metrics, "LoggedInCustomerInfo")).Methods(http.MethodGet)
+	s.Handle("/{userId}", httpkit.InstrumentingMiddleware(authMiddleware(findCustomerHandler), metrics, "GetCustomer")).Methods(http.MethodGet)
+	s.Handle("/{userId}", httpkit.InstrumentingMiddleware(authMiddleware(updateCustomerHandler), metrics, "UpdateCustomer")).Methods(http.MethodPut)
 	return r
 }
 
