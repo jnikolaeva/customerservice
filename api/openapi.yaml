@@ -42,8 +42,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Customer'
-        "409":
-          description: duplicate email
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /me:
     get:
       tags:
