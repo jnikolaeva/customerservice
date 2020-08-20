@@ -11,7 +11,7 @@ import (
 )
 
 type Proxy struct {
-	baseURL string
+	baseURL    string
 	httpClient *http.Client
 }
 
@@ -28,13 +28,13 @@ func NewProviderProxy(baseURL string) *Proxy {
 	client := http.DefaultClient
 	client.Timeout = 20 * time.Second
 	return &Proxy{
-		baseURL: baseURL,
+		baseURL:    baseURL,
 		httpClient: client,
 	}
 }
 
 func (p *Proxy) Register(username, password string) (uuid.UUID, error) {
-	registerURL := p.baseURL + "/register"
+	registerURL := p.baseURL + "/users"
 	request := &registerUserRequest{
 		Username: username,
 		Password: password,
@@ -63,7 +63,7 @@ func (p *Proxy) Register(username, password string) (uuid.UUID, error) {
 }
 
 func (p *Proxy) Delete(userID uuid.UUID) error {
-	deleteURL := p.baseURL + "/" + userID.String()
+	deleteURL := p.baseURL + "/users/" + userID.String()
 	req, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
 	if err != nil {
 		return err
